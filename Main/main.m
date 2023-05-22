@@ -23,10 +23,10 @@ MAC.progressBar = waitbar(0, 'Simulating..', 'CreateCancelBtn', 'setappdata(gcbf
 setappdata(MAC.progressBar, 'canceling', 0)
 set(MAC.progressBar, 'Position', [550 400 360 100])
 % Basic simulation setup
-MAC.controlMethod = 0; % 0 = no control - only simulation, 1 = linear MPC, 2 = nonlinear control (CasADi)
+MAC.controlMethod = 1; % 0 = no control - only simulation, 1 = linear MPC, 2 = nonlinear control (CasADi)
 MAC.meal = 1; % 0 = no meal included in the simulation, 1 = meals are included in the simulation
 MAC.RealPatient = 1; % 0 = the big model isnt used, 1 = the big model is used
-MAC.simDays = 1; % number of days to simulate
+MAC.simDays = 2; % number of days to simulate
 MAC.adherence = 1; % chance of remembering to inject
 MAC.trajectory = 1; % 0 = linearize only once upon simulation start, 1 = a new linearization is performed once a day
 MAC.steadyStateGlucose = 5; % This is the linearization point if trajectory is 0
