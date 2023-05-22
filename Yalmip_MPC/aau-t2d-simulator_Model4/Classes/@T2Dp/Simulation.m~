@@ -1,0 +1,139 @@
+%Simulation function:
+function [X,time] = Simulation(obj)
+%% Simulation time: 
+Nd=obj.Nd; %days
+Nmin=obj.Nmin;
+T=obj.T;
+
+%% Define stress vector:
+    stressv=obj.Stress;
+%% Define Heart rate vector:
+    HRv=obj.HRd+obj.Param.HRb*ones(1,length(T));
+%% Define Long-acting and Fast-acting insulin doses:
+%     Ulat=obj.Ula.Time; %time minutes for doses (begining of each day).
+%     Ufat=obj.Ufa.Time; 
+    %Amount of doses:
+    Ula=obj.Ula*1e2; %In units.
+    Ufa=obj.Ufa*1e2; %In units.
+%% Define Metformin doses:
+%     Umt = obj.Um.Time;
+%Amount of doses:
+    Um = obj.Um*1e3;
+%% Define Vildagliptin doses:
+%     Uvt=obj.Uv.Time;
+    Uv=obj.Uv;
+%% Define meals:
+%     Dgt = obj.Dgt.Time;
+    Dg = obj.Meals*1000;
+    if (Dg(1)==0)
+        something = 1; 
+    else
+        something = 0;
+    end
+
+%% Define states and initialize:
+    
+% %Define the parameters of the model:
+%     param=param_def();
+
+%Time moments to stop:
+Tstop=[T(1) T(Dg>0) T(Ula>0) T(Ufa>0) T(Um>0) T(Uv>0) T(end)];
+Tstop=unique(Tstop);
+display(Tstop);
+Xstop=zeros(54,length(Tstop));
+Xstop(:,1)=obj.X0;
+time=0; %Time vector.
+X=[]; %State vector:
+X=obj.X0;
+for i=2:length(Tstop)
+    
+   if(something==1 && i==2)
+       DM=1;
+   else
+       DM=X(47,end)+Dg(Tstop(i-1)+1)-X(48,end);
+   end
+   %Impulse inputs:
+   Xstop([1 47 48 4 5 10 18 20],i-1)=[Dg(Tstop(i-1)+1);Dg(Tstop(i-1)+1); DM; Um(Tstop(i-1)+1);Um(Tstop(i-1)+1);...
+       Uv(Tstop(i-1)+1); Ufa(Tstop(i-1)+1)/6.76; Ula(Tstop(i-1)+1)/6.76]...
+       +Xstop([1 47 48 4 5 10 18 20],i-1);
+   
+   %Simulate:
+   tic
+   [ts,Xs] =ode15s(@(t,x) fode(obj,t, x, Dg(Tstop(i-1)+1), stressv, HRv, T,...
+       obj.Param, obj.basal), [Tstop(i-1) Tstop(i)],Xstop(:,i-1));
+   Xs=Xs';
+   X=[X,Xs(:,2:end)];
+   Xstop(:,i)=Xs(:,end);
+   ttoc=toc;
+   time=[time,ts(2:end)'];
+    disp(['Progress: |',repmat('#',1,round(time(end)/(Nmin-1)*10)),...
+        repmat(' ',1,10-round(time(end)/(Nmin-1)*10)),'| ',...
+        num2str(time(end)/(Nmin-1)*100),'%']);
+    if(ttoc>=60 && ttoc<5*60)
+        disp("It is taking some time. It's ok.");
+    elseif(ttoc>=5*60 && ttoc<10*60)
+        disp("This is taking more time than it should...So how's the weather?")
+    elseif (ttoc>=10*60 && ttoc<15*60)
+        disp("It took too much time. You can make some coffee or tea while it's running")
+    elseif(ttoc>=15*60)
+        disp("It took too much time. Something is probably wrong. Glucose is unstable or negative. Stop the simulation")
+    end
+end
+obj.time = time;
+    %Save states:
+    %Glucose absorption model: 
+    XT.qss=X(1,:); XT.qsl=X(2,:); XT.qint=X(3,:);
+    XT.De=X(47,:); XT.DNq=X(48,:);    
+
+    %Metformin submodel:
+    XT.MO1=X(4,:); XT.MO2=X(5,:); XT.MGl=X(6,:); XT.MGW=X(7,:); XT.ML=X(8,:);
+    XT.MP=X(9,:);
+
+    %Vildagliptin submodel: 
+    XT.AG1=X(10,:); XT.AG2=X(11,:); XT.Ac=X(12,:); XT.Ap=X(13,:); XT.DRc=X(14,:);
+    XT.DRp=X(15,:);
+    
+    %Physical activity model:
+    XT.E1=X(16,:); XT.E2=X(17,:);
+    XT.TE=X(49,:);
+    %Fast acting insulin:
+    XT.Hfa=X(18,:); XT.Dfa=X(19,:);
+
+    %Long acting insulin:
+    XT.Bla=X(20,:); XT.Hla=X(21,:); XT.Dla=X(22,:);
+
+    %Pancreas submodel
+    XT.mpan=X(23,:); XT.P=x(24,1); XT.R=x(25,1);
+    
+    %Insulin submodel:
+    XT.IB=x(26,1);   XT.IH=x(27,1); XT.IG=x(28,1); XT.IL=x(29,1); XT.IK=x(30,1);
+    XT.IPC=x(31,1); XT.IPF=x(32,1);
+
+    %Glucose submodel:
+    XT.GBC=x(33,1); XT.GBF=x(34,1); XT.GH=x(35,1); XT.GG=x(36,1); XT.GL=x(37,1);...
+    XT.GK=x(38,1);  XT.GPC=x(39,1); XT.GPF=x(40,1);
+    
+    %Glucagon submodel:
+    XT.Gamma=x(41,1);
+    
+    %GLP-1 submodel:    
+    XT.phi=x(42,1); XT.PHI=x(43,1);
+    
+    %rates:
+    XT.MIHGP=x(44,1);
+    XT.fr=x(45,1);
+    XT.MIHGU=x(46,1);
+    
+    %Total glucose consumption: 
+    XT.XGC = x(50,1);
+    %Total Glucose production and appearance: 
+    XT.XGP = x(51,1);
+    %Total insulin consumption: 
+    XT.XIC = x(52,1);
+    %Secreted inuslin: 
+    XT.XIS = x(53,1);
+    %Injected insulin: 
+    XT.XIinj = x(54,1);
+    obj.X=XT;
+%% Plotting:
+%plotting;

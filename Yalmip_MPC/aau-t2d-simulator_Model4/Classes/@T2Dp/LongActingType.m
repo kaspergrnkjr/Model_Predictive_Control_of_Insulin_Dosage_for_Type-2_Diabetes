@@ -1,0 +1,13 @@
+function LongActingType(obj,Type)
+if Type == "Insulin Glargine"
+    obj.Param.pla=0.014023809879501; obj.Param.rla=0.005642135109700; obj.Param.qla=0.007287049037943;...
+    obj.Param.bla=0.088371175275079;...
+    obj.Param.Cmax=15; obj.Param.kla=0.033904763958221; obj.Param.kcll =0.005347967285141;
+elseif Type == "Insulin Degludec"
+    obj.Param.pla=0.013691570387547; obj.Param.rla=0.085809546448744; obj.Param.qla=0.015050127414793;...
+    obj.Param.bla=0.035660745579443;...
+    obj.Param.Cmax=15; obj.Param.kla=0.026892564613936; obj.Param.kcll =0.040585233868227;
+else
+    error('Type can only be: Insulin Degludec, Insulin Glargine');
+end
+

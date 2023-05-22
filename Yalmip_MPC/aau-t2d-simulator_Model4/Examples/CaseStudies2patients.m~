@@ -1,0 +1,122 @@
+%In this example we compare between two different patients with different
+%lifestyles and medications.
+
+%% Define Two patients:
+
+%Assume both patients have the same parameters and initial conditions:
+p1 = T2Dp;
+p2 = T2Dp;
+
+%% Define Meals: 
+%Assume that the two patients have the same meal plans: 
+
+%The method (perday) lets you define any input for day and repeated for all
+%the simulation days:
+
+%Say the patient eats three meals: 7:00, 12:00, and 18:00 :
+Mealtimes = [7*60 12*60 18*60]; %In minutes from 00:00.
+MealSizes = [30 80 150]; %In grams.
+
+[m, mt]=p1.perday(Mealtimes,MealSizes);
+
+p1.Meals = m;
+p2.Meals = m;
+
+%% Define insulin treatments: 
+%The first patient takes only long acting insulin once per day of dose size
+%Ula = 30 [U]
+Ulatimes = 0;
+UlaSizes = 30;
+
+[ula1, ulat1]=p1.perday(Ulatimes,UlaSizes);
+
+p1.Ula = ula1;
+
+%As for the second patient, the patient takes long acting insulin with size
+%50 [U] once per day in addtion to a long acting insulin
+Ulatimes = 0;
+UlaSizes = 50;
+
+[ula2, ulat2]=p2.perday(Ulatimes,UlaSizes);
+
+p2.Ula = ula2;
+
+
+%Patient 2 also takes fast acting insulin dose of 20 [U]:
+Ufatimes = 17.75*60;
+UfaSizes = 20;
+
+[ufa2, ufat2]=p2.perday(Ufatimes,UfaSizes);
+
+p2.Ufa = ufa2;
+
+
+%% Metformin 
+
+%Patient 2 takes a 500 mg dose of metformin everyday 15 mins before dinner:
+Mtimes = 17.75*60;
+Msizes = 500; 
+
+[um, umt]=p1.perday(Ufatimes,UfaSizes);
+
+p1.Um = um;
+
+%Patient 2 also take a metformin dose everyday 15 mins before dinner but
+%they take double the dose.
+
+p2.Um = 2*um;
+
+%% Physical Activity
+
+%Only patient 1 exercises everyday between 16 to 16:30 raising his heart
+% beats by 40 bpm from its base according to a trapazoidal function
+
+%You can use the trapazoidal method to define a trapazoidal signal and then
+%repeat it for the simulation days: (Future work: expand the perday method
+%to include a trapazoidal and rectangle option).
+
+y = p1.Rampf(40,16*60,16.1*60,16.4*60,16.5*60,(0:p1.dt:(24*60-1)));
+
+PA = repmat(y,[1,p1.Nd]);
+
+p1.HRd = PA; 
+
+%% Stress
+
+%Patient 2 suffer from stress on the second day with a value of 0.3 between
+%10:00 to 16:00
+
+y = p2.Rampf(0.4,10*60+24*60, 11*60+24*60, 15*60+24*60, 16*60+24*60, p1.T);
+
+p2.Stress = y; 
+
+
+%% Simulation
+p1.Simulation;
+
+X1 = p1.X;
+time1 = p1.time;
+
+p2.Simulation;
+
+X2 = p2.X;
+time2 = p2.time;
+
+%% Plotting
+figure 
+subplot(2,1,1)
+plot(time1/(24*60),X1.GH*0.055,'LineWidth',5);
+hold on 
+plot(time2/(24*60),X2.GH*0.055,'LineWidth',5);
+xlabel('Time [Day]')
+ylabel('Plasma Glucose [mmol/L]')
+grid on 
+legend('p1','p2')
+subplot(2,1,2)
+plot(time1/(24*60),X1.IH,'LineWidth',5);
+hold on 
+plot(time2/(24*60),X2.IH,'LineWidth',5);
+xlabel('Time [Day]')
+ylabel('Plasma Glucose [mU/dL]')
+grid on 
+legend('p1','p2')

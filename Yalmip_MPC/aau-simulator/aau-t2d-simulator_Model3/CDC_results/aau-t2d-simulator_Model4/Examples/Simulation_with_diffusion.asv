@@ -1,0 +1,13 @@
+clear all
+p = T2Dp; 
+p.dtdif = 5; 
+Mealtimes = [7*60 12*60 18*60]; %In minutes from 00:00.
+MealSizes = [30 50 120]; %In grams.
+
+%The (perday) method can now be used to generate meals for 4 days.
+[y, yt]=p.perday(Mealtimes,MealSizes);
+p.Meals = y;
+p.Simulation_diffusion;
+X = p.X; 
+time = p.time;
+plot(time,X.GH*0.056)

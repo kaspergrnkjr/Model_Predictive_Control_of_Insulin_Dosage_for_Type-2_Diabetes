@@ -1,0 +1,163 @@
+%Simulation function:
+function [X,time] = Simcont(obj,ula,Tc)
+%% Simulation time: 
+Nd=obj.Nd; %days
+Nmin=obj.Nmin;
+T=obj.T;
+
+%% Define stress vector:
+    stressv=obj.Stress;
+%% Define Heart rate vector:
+    HRv=obj.HRd+obj.Param.HRb*ones(1,length(T));
+%% Define Long-acting and Fast-acting insulin doses:
+%     Ulat=obj.Ula.Time; %time minutes for doses (begining of each day).
+%     Ufat=obj.Ufa.Time; 
+    %Amount of doses:
+    Ula=obj.Ula*1e2; %In units.
+    Ufa=obj.Ufa*1e2; %In units.
+%% Define Metformin doses:
+%     Umt = obj.Um.Time;
+%Amount of doses:
+    Um = obj.Um*1e3;
+%% Define Vildagliptin doses:
+%     Uvt=obj.Uv.Time;
+    Uv=obj.Uv;
+%% Define meals:
+%     Dgt = obj.Dgt.Time;
+    Dg = obj.Meals*1000;
+    if (Dg(1)==0)
+        something = 1; 
+    else
+        something = 0;
+    end
+
+%% Define states and initialize:
+    
+% %Define the parameters of the model:
+%     param=param_def();
+
+%Time moments to stop:
+Tcc = find(Tc>0);
+Tstop=[T(1) T(Dg>0) T(Ula>0) T(Ufa>0) T(Um>0) T(Uv>0) Tcc T(end)];
+Tstop=unique(Tstop);
+Xstop=zeros(54,length(Tstop));
+Xstop(:,1)=obj.X0;
+time=0; %Time vector.
+X=[]; %State vector:
+X=obj.X0;
+ulan = u
+for i=2:length(Tstop)
+    
+   if(something==1 && i==2)
+       DM=1;
+   else
+       DM=X(47,end)+Dg(Tstop(i-1)+1)-X(48,end);
+   end
+   count = 0;
+   if(sum(Tstop(i-1)==Tcc))
+       count = count +1 ; 
+       display(count)
+   FGH = Xstop(35,i-1)*0.055;
+   if FGH<3.1
+    ula = ula -4;
+    elseif FGH>=3.1 && FGH<=3.9
+    ula = ula -2; 
+    elseif FGH>3.9 && FGH <=5
+    ula = ula;
+    elseif FGH>5 && FGH <=7
+    ula = ula + 2; 
+    elseif FGH>7 && FGH<=8
+    ula = ula + 4; 
+    elseif FGH >8 && FGH<=9
+    ula = ula + 6; 
+    else
+    ula = ula + 8;
+   end
+   Ula = ula*1e2*ones(1,length(Ula)); 
+   display(ula)
+   end
+   %Impulse inputs:
+   Xstop([1 47 48 4 5 10 18 20],i-1)=[Dg(Tstop(i-1)+1);Dg(Tstop(i-1)+1); DM; Um(Tstop(i-1)+1);Um(Tstop(i-1)+1);...
+       Uv(Tstop(i-1)+1); Ufa(Tstop(i-1)+1)/6.76; Ula(Tstop(i-1)+1)/6.76]...
+       +Xstop([1 47 48 4 5 10 18 20],i-1);       
+   %Simulate:
+   tic
+   [ts,Xs] =ode15s(@(t,x) fode(obj,t, x, Dg(Tstop(i-1)+1), stressv, HRv, T,...
+       obj.Param, obj.basal), [Tstop(i-1) Tstop(i)],Xstop(:,i-1));
+   Xs=Xs';
+   X=[X,Xs(:,2:end)];
+   Xstop(:,i)=Xs(:,end);
+   ttoc=toc;
+   time=[time,ts(2:end)'];
+    disp(['Progress: |',repmat('#',1,round(time(end)/(Nmin-1)*10)),...
+        repmat(' ',1,10-round(time(end)/(Nmin-1)*10)),'| ',...
+        num2str(time(end)/(Nmin-1)*100),'%']);
+    if(ttoc>=60 && ttoc<5*60)
+        disp("It is taking some time. It's ok.");
+    elseif(ttoc>=5*60 && ttoc<10*60)
+        disp("This is taking more time than it should...So how's the weather?")
+    elseif (ttoc>=10*60 && ttoc<15*60)
+        disp("It took too much time. You can make some coffee or tea while it's running")
+    elseif(ttoc>=15*60)
+        disp("It took too much time. Something is probably wrong. Glucose is unstable or negative. Stop the simulation")
+    end
+end
+obj.time = time;
+    %Save states:
+    %Glucose absorption model: 
+    XT.qss=X(1,:); XT.qsl=X(2,:); XT.qint=X(3,:);
+    XT.De=X(47,:); XT.DNq=X(48,:);    
+    
+    %Metformin submodel:
+    XT.MO1=X(4,:); XT.MO2=X(5,:); XT.MGl=X(6,:); XT.MGW=X(7,:); XT.ML=X(8,:);
+    XT.MP=X(9,:);
+
+    %Vildagliptin submodel: 
+    XT.AG1=X(10,:); XT.AG2=X(11,:); XT.Ac=X(12,:); XT.Ap=X(13,:); XT.DRc=X(14,:);
+    XT.DRp=X(15,:);
+    
+    %Physical activity model:
+    XT.E1=X(16,:); XT.E2=X(17,:);
+    XT.TE=X(49,:);
+    %Fast acting insulin:
+    XT.Hfa=X(18,:); XT.Dfa=X(19,:);
+
+    %Long acting insulin:
+    XT.Bla=X(20,:); XT.Hla=X(21,:); XT.Dla=X(22,:);
+
+    %Pancreas submodel
+    XT.mpan=X(23,:); XT.P=X(24,:); XT.R=X(25,:);
+    
+    %Insulin submodel:
+    XT.IB=X(26,:);   XT.IH=X(27,:); XT.IG=X(28,:); XT.IL=X(29,:); XT.IK=X(30,:);
+    XT.IPC=X(31,:); XT.IPF=X(32,:);
+
+    %Glucose submodel:
+    XT.GBC=X(33,:); XT.GBF=X(34,:); XT.GH=X(35,:); XT.GG=X(36,:); XT.GL=X(37,:);...
+    XT.GK=X(38,:);  XT.GPC=X(39,:); XT.GPF=X(40,:);
+    
+    %Glucagon submodel:
+    XT.Gamma=X(41,:);
+    
+    %GLP-1 submodel:    
+    XT.phi=X(42,:); XT.PHI=X(43,:);
+    
+    %rates:
+    XT.MIHGP=X(44,:);
+    XT.fr=X(45,:);
+    XT.MIHGU=X(46,:);
+    
+    %Total glucose consumption: 
+    XT.XGC = X(50,:);
+    %Total Glucose production and appearance: 
+    XT.XGP = X(51,:);
+    %Total insulin consumption: 
+    XT.XIC = X(52,:);
+    %Secreted inuslin: 
+    XT.XIS = X(53,:);
+    %Injected insulin: 
+    XT.XIinj = X(54,:);
+    obj.X=XT;
+    obj.Xend = X(:,end);
+%% Plotting:
+%plotting;

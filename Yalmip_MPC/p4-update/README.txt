@@ -1,0 +1,1 @@
+The files named gain*.csv are simulated for 20 days with p4 = 1.8, p4_n = p4*2, and everything is deterministic

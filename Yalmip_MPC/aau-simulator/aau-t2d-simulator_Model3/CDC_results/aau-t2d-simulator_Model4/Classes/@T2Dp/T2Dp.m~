@@ -1,0 +1,153 @@
+%Define a patient class 
+classdef T2Dp < handle
+   properties
+   Param = paramClass
+   %Initial values:
+   %Glucose concentration in the periphery central compartment:
+   GBPC0=7/0.0555; % in mg/dl
+    
+   %Insulin concentraion in the in periphery compartment: 
+   IBPF0=1; % in mU/l
+   
+   %Basal rates (All basal rates except for rHGP since it is calculated
+   %from the others):
+   brates=struct();
+   %Simulation parameters:
+        Nd = 4 %Number of simulation days
+        dt = 1;%Simulation step sizes for the inputs (in minutes)
+        Nmin; %Number of minutes for the simulation
+        T; %Time vector in minutes for the inputs
+        
+        Meals;% in grams of carbohydrates
+        
+        %Long acting insulin:
+        Ula;% in Units
+        
+        %Fast acting insulin:
+        Ufa;% in Units
+        
+        %Heart rate difference from base (HRb):
+        HRd;% in bpm
+        
+        %Metformin doses: 
+        Um;% in mg
+        
+        %Vildagliptin:
+        Uv;% in mg
+        
+        %Stress: 
+        Stress;% from 0 to 1 
+       
+       %Simulated states:
+       X=struct();
+       %Simulated time:
+       time;
+   end
+   
+   %Dependent properties:
+   properties (Dependent)
+       %Initial conditions:
+       X0;
+       %Basal values:
+       basal;
+   end
+   
+   methods
+       %Constructor: 
+       function obj = T2Dp(Param,GBPC0,IBPF0,brates,Nd,dt)
+            if(nargin>0)
+                if not(isempty(Param)) 
+                    obj.Param = Param;
+                end
+                if not(isempty(GBPC0))
+                obj.GBPC0 = GBPC0;
+                end
+                if not(isempty(IBPF0))
+                obj.IBPF0 = IBPF0;
+                end
+                if not(isempty(brates))
+                obj.brates = brates;
+                end
+                if not(isempty(Nd))
+                obj.Nd = Nd;
+                end
+                if not(isempty(dt))
+                obj.dt = dt;
+                end
+            end
+            brates.rBGU=70;
+            brarRBCU=10;
+            rGGU=20;
+            rPGU=35;
+            rHGU=20;
+            obj.Nmin = obj.Nd*(obj.dt*24*60);
+            obj.T = 0:(obj.Nmin-1);
+            obj.Meals = perday(obj,[],[]);
+            obj.Ula = perday(obj,[],[]);
+            obj.Ufa = perday(obj,[],[]);
+            obj.Um = perday(obj,[],[]);
+            obj.Uv = perday(obj,[],[]);
+            obj.Stress = perday(obj,[],[]);
+            obj.HRd = perday(obj,[],[]);
+       end
+       
+       %Set:
+      function  set.Param(obj,Param)
+         obj.Param = Param;
+      end
+      
+      function  set.GBPC0(obj,GBPC0)
+         obj.GBPC0 = GBPC0;
+      end 
+      
+      function  set.IBPF0(obj,IBPF0)
+         obj.IBPF0 = IBPF0;
+      end
+      
+      function  set.brates(obj,brates)
+         obj.brates = brates;
+      end
+      
+      function X0v = get.X0(obj)
+         [X0v,~,~] = BasaldefGCPFIPF(obj);
+      end
+      
+      function basalv = get.basal(obj)
+         [~,rates,SB] = BasaldefGCPFIPF(obj);
+         basal0=struct();
+         basal0.GPF=obj.X0(40,1); basal0.IPF=obj.IBPF0;...
+         basal0.IL=obj.X0(29,1); basal0.GL=obj.X0(37,1);
+         basal0.Gamma=obj.X0(41,1); basal0.SB=SB; basal0.GH=obj.X0(35,1); 
+         basal0.IH=obj.X0(27,1);
+         basal0.rPIR = rates(1);
+         basal0.rBGU = rates(2);
+         basal0.rRBCU = rates(3);
+         basal0.rGGU = rates(4);
+         basal0.rPGU = rates(5);
+         basal0.rHGP = rates(6);
+         basal0.rHGU = rates(7);
+         basalv = basal0;
+      end
+       
+       %To get the initial conditions in case of IPF and GPC given:
+       [X0,rates,S]=BasaldefPF(obj)
+       
+       %Dynamics:
+       dx=fode(obj,t, x, Dg, stressv, HRv, T, param, basal);
+        
+       %Function to define rectanglar inputs: 
+       y = rectf(obj,c,t1,t2,T);
+        
+       %Function to define trapazoidal inputs: 
+       y = Rampf(obj,c,t1,t2,t3,t4,T)
+        
+       %Function to define inputs perday:
+       [y,yt] = perday(obj,tpd,upd);
+        
+       %Simulation function:
+       [X,time]=Simulation(obj);
+       
+       
+   end
+   
+end
