@@ -17,7 +17,7 @@ p.Param.c1 = 1;
 p.Param.c2 = 1;
 p.Param.d1 = 1;%c1(j);
 p.Param.d2 = 1;%c2(j);
-p.Param.SPGU = 10;
+p.Param.SPGU = 4;
 p.Param.SHGU = 1e-8;
 p.Param.SHGP = 1e-8;
 

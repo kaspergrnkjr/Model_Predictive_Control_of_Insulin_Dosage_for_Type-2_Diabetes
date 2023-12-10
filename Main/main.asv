@@ -27,7 +27,7 @@ MAC.controlMethod = 2; % 0 = no control - only simulation, 1 = linear MPC, 2 = n
 MAC.meal = 1; % 0 = no meal included in the simulation, 1 = meals are included in the simulation
 MAC.RealPatient = 1; % 0 = the big model isnt used, 1 = the big model is used
 MAC.simDays = 20; % number of days to simulate
-MAC.adherence = 0.8; % chance of remembering to inject
+MAC.adherence = 1; % chance of remembering to inject
 MAC.trajectory = 1; % 0 = linearize only once upon simulation start, 1 = a new linearization is performed once a day
 MAC.steadyStateGlucose = 5; % This is the linearization point if trajectory is 0
 MAC.numOfSavedStates = 5; % This is how many of the previous states is carried along in the simulation. So e.g. state at time k-5 is always available
@@ -42,9 +42,9 @@ MAC.modelMismatch = 0; % 0 = the model parameters in the patient simulation is t
 MAC.noisyMeasurements = 1; % 0 = No noise is added to the states taken from the simulation, 1 = Noise is added to the values passed to the estimator.
 MAC.carbLowerBound = 250; %We decided to use the sum of the mean meal carbs minus lunch as the lower bound
 MAC.maybeBad = 0; %Want to have the patient maybe be a bad patient?
-MAC.NonAdherent = 1; %Default value
-MAC.conservativeDose = 0; % 0 = The dose the MPC suggests is administered, 1 = The dose is scaled down in the beginning
-MAC.sensitivityUpdate = 0; % 0 = The sensitivity is constant, 1 = The sensitivity is updated each morning
+MAC.NonAdherent = 0; %Default value
+MAC.conservativeDose = 1; % 0 = The dose the MPC suggests is administered, 1 = The dose is scaled down in the beginning
+MAC.sensitivityUpdate = 1; % 0 = The sensitivity is constant, 1 = The sensitivity is updated each morning
 
 if(MAC.maybeBad==1)
     MAC.NonAdherent=(unifrnd(0,1)>0.567);
